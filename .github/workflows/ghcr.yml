@@ -1,0 +1,75 @@
+name: Build and Push furucombo-contract to GHCR - Free - No Local Docker - Uses Proxy WITHOUT Redeploying
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Manual button - For ZIP or repo - Free - No special API
+  schedule:
+    - cron: '0 0 * * 0' # Weekly rebuild - Auto pushes to GHCR
+
+jobs:
+  build-and-push-ghcr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # Needed to push to GHCR - Free - No special permission - Permissionless
+
+    steps:
+      - name: Checkout YOUR repo - Has Dockerfile + ghcr.yml - Anyone can fork
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set up Docker Buildx - No local Docker - Online builder
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR - Free - No special API - Uses GITHUB_TOKEN auto - No personal token needed
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} # Auto token - Free - Permissionless - No special
+
+      - name: Extract metadata - Tags for GHCR - Ready deployed - No redeploy
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+            ghcr.io/${{ github.repository_owner }}/furucombo-contract
+          tags: |
+            type=raw,value=latest
+            type=sha
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+          labels: |
+            org.opencontainers.image.title=furucombo-contract - Ready Deployed FlashLoan Executor
+            org.opencontainers.image.description=Ready Deployed - Furucombo Proxy 0x17e6dE1a56b5f0Aa32E2178e9b3E2C4dB6B3927B + 1inch V6 0x1111... 0% FREE + 0x 0xDef1... Polygon + Balancer 0xBA12... 0% FREE - All used WITHOUT redeploying - Just call proxy/pool - Anyone can use - No permission
+
+      - name: Build and Push to GHCR - No local Docker - Online runner builds - Free - Pushes to ghcr.io/YOURNAME/furucombo-contract
+        uses: docker/build-push-action@v5
+        with:
+          context:.
+          file:./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Success - Image in GHCR - Ready Deployed - No redeploy needed - Just call proxy/pool
+        run: |
+          echo "✅ Pushed to GHCR:"
+          echo "ghcr.io/${{ github.repository }}:latest"
+          echo "ghcr.io/${{ github.repository_owner }}/furucombo-contract:latest"
+          echo ""
+          echo "Ready Deployed Executors - No redeploy - Just call proxy/pool - Anyone can use - No permission:"
+          echo "Furucombo Old Polygon: 0x17e6dE1a56b5f0Aa32E2178e9b3E2C4dB6B3927B - Has executeOperation + uniswapV2Call - 0% fee"
+          echo "1inch V6 Router: 0x111111125421ca6dc452d289314280a0f8842a65 - 0% FREE - Takes surplus - Has built-in flashloan via resolver"
+          echo "0x Exchange Proxy Polygon: 0xDef1C0ded9bec7F1a1670819833240f027b25EfF - Polygon mainnet already deployed - 0% FREE"
+          echo "Balancer Vault: 0xBA12222222228d8Ba445958a75a0704d566BF2C8 - 0% FREE flashloan"
+          echo "Aave V3 Pool: 0x794a61358D6845594F94dc1DB02A252b5b665AC - 0.05%"
+          echo ""
+          echo "WP Plugin: Uses wrappers WITHOUT redeploying - No Bunny Edge - No external - Only WP + public RPC + wrapper"
+          echo "Usage: docker pull ghcr.io/${{ github.repository }}:latest"
